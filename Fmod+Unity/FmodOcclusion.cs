@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 using FMODUnity;
+using FMOD.Studio;
 
 public class FmodOcclusion : MonoBehaviour
 {
     [Header("Fmod Event")]  //Declaring on Fmod Event.
-    [FMODUnity.EventRef]
-    public string bgm;
+    public EventReference bgm;
     FMOD.Studio.EventInstance _bgmEvent;
     Transform playerLocation;  //reference to our player transform to shoot raycast.
     [Header("Occlusion Options")] //Occlusion, Fmod parameters values.

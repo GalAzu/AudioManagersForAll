@@ -3,24 +3,52 @@ using System.Collections.Generic;
 using UnityEngine;
 using FMOD.Studio;
 using FMODUnity;
+using System;
+
 public class FmodAudioManager : MonoBehaviour
 {
+    [Header("Level audio")]
+    [SerializeField] private EventReference ambianceRef;
     [SerializeField] private EventReference bgmRef;
-    [SerializeField][ParamRef] string param;
     [SerializeField] List<FmodSfxClass> sfxList = new List<FmodSfxClass>();
-    public EventInstance bgm;
-    public EventInstance ambiance;
-    public PLAYBACK_STATE bgmState;
+    [SerializeField] List<FmodSnapshots> sceneSnapShots = new List<FmodSnapshots>();
+    [Header("Dependencies")]
+    [SerializeField] private StudioListener mainListener;
+    [SerializeField] private ParamRef bgm_dynamics;
+    public Transform ambianceTransform;
+    [SerializeField]private EventInstance bgm;
+    [SerializeField] private EventInstance ambiance;
+    [HideInInspector]public PLAYBACK_STATE bgmState;
+    [SerializeField] private bool playOnAwake;
     public static FmodAudioManager instance;
-    private int sfxListIndex;
-    [SerializeField] private bool PlayBgmOnStart;
-
 
     private void Awake()
     {
-        bgm = RuntimeManager.CreateInstance(bgmRef);
         instance = this;
-        bgm.start();
+        bgm = RuntimeManager.CreateInstance(bgmRef);
+        ambiance = RuntimeManager.CreateInstance(ambianceRef);
+        PopulateSceneSnapshots();
+    }
+    private void Start()
+    {
+        if(playOnAwake)
+        {
+            bgm.start();
+            ambiance.start();
+        }
+    }
+
+    private void PopulateSceneSnapshots()
+    {
+        foreach (var snap in sceneSnapShots)
+        {
+            snap.instance = RuntimeManager.CreateInstance(snap.path);
+        }
+    }
+
+    internal void PlayAndAttachOneShot(FmodSfxClass.sfxEnums footsteps, object material, string v, Vector3 position)
+    {
+        throw new NotImplementedException();
     }
 
     //Update inspector UI to match enum to name
@@ -32,6 +60,8 @@ public class FmodAudioManager : MonoBehaviour
             sfx.name = sfx.sfx.ToString();
         }
     }
+    #region sfxHandler
+
     private FmodSfxClass GetSFX(FmodSfxClass.sfxEnums sfxEnum)
     {
         FmodSfxClass sfxElement = sfxList.Find(num => num.sfx == sfxEnum);
@@ -47,23 +77,48 @@ public class FmodAudioManager : MonoBehaviour
         instance.release();
     }
     //OneShot overload with parameter Control.
-    public void PlayAndAttachOneShot(FmodSfxClass.sfxEnums sfxEnum , string ParamName, int paramValue ,Vector3 position)  
+    public void PlayAndAttachOneShot(FmodSfxClass.sfxEnums sfxEnum,  Vector3 position, ParamRef param , int paramValue)
     {
+        param.Value = paramValue;
         var sfxElement = sfxEnum;
         FmodSfxClass sfxToPlay = sfxList.Find(num => num.sfx == sfxEnum);
-        sfxToPlay.posInWorld = position;
         var instance = RuntimeManager.CreateInstance(sfxToPlay.path);
         instance.set3DAttributes(RuntimeUtils.To3DAttributes(position));
         instance.start();
         instance.release();
     }
-    //Set event parameter by passing your event, your param name and value.
-    public  void SetEventParameter(EventInstance fmodEvent, string paramName , int paramValue) => fmodEvent.setParameterByName(paramName, paramValue);
-
-    public void PlayEvent(EventInstance fmodEvent)
+    public void PlayAndAttachOneShot(EventReference eventRef, Vector3 position = new Vector3())
+    {
+        var instance = RuntimeManager.CreateInstance(eventRef);
+        instance.set3DAttributes(RuntimeUtils.To3DAttributes(position));
+        instance.start();
+        instance.release();
+    }
+    public void PlayAndAttachOneShot(EventReference eventRef, ParamRef param, int paramValue, Vector3 position)
+    {
+        param.Value = paramValue;
+        var instance = RuntimeManager.CreateInstance(eventRef);
+        instance.set3DAttributes(RuntimeUtils.To3DAttributes(position));
+        instance.start();
+        instance.release();
+    }
+   
+    #endregion
+    #region eventsHandler
+    public void PlayEvent(EventInstance fmodEvent, Vector3 posInWorld)
     {
         if (PlaybackState(fmodEvent) != PLAYBACK_STATE.PLAYING)
         {
+            fmodEvent.set3DAttributes(RuntimeUtils.To3DAttributes(posInWorld));
+            fmodEvent.start();
+        }
+    }
+    public void PlayEvent(EventInstance fmodEvent, Vector3 posInWorld, string paramName, int paramValue)
+    {
+        if (PlaybackState(fmodEvent) != PLAYBACK_STATE.PLAYING)
+        {
+            fmodEvent.setParameterByName(paramName, paramValue);
+            fmodEvent.set3DAttributes(RuntimeUtils.To3DAttributes(posInWorld));
             fmodEvent.start();
         }
     }
@@ -72,10 +127,24 @@ public class FmodAudioManager : MonoBehaviour
         fmodEvent.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
         fmodEvent.release();
     }
+    //Set event parameter by passing your event, your param name and value.
+    public void SetEventParameter(EventInstance fmodEvent, string paramName , int paramValue) => fmodEvent.setParameterByName(paramName, paramValue);
+
+    public void PlayEvent(EventInstance fmodEvent)
+    {
+        if (PlaybackState(fmodEvent) != PLAYBACK_STATE.PLAYING)
+        {
+            fmodEvent.start();
+        }
+    }
+
     //Get playback state of every event playing by passing it in.
     private PLAYBACK_STATE PlaybackState(EventInstance instance)
     {
         instance.getPlaybackState(out PLAYBACK_STATE state);
         return state;
     }
+    #endregion
+
+
 }
