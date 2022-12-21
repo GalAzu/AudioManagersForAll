@@ -4,7 +4,7 @@ using UnityEngine;
 using FMOD.Studio;
 using FMODUnity;
 using UnityEngine.InputSystem;
-
+// THIS SCRIPT HAS NOT YET FOUND HIS END, SO TO BE CONTINUTED :)
 public class FmodFootsteps : MonoBehaviour
 {
     [SerializeField]private Transform footstepsTransform;
